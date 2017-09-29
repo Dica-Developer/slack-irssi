@@ -1,5 +1,13 @@
 # slack-irssi
 
+# Requirements
+
+`JSON`
+`Mozilla::CA`
+
+Please install above requirements in order to work correctly with this script.
+`cpan JSON`and `cpan Mozilla::CA`
+
 # Settings
 
 * slack_api_token ('')
