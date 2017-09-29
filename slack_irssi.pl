@@ -9,7 +9,7 @@ our %IRSSI = (
     name => 'slack_irssi',
     description => '',
     license => 'GPLv3',
-    requires => 'Mozilla::CA, JSON'
+    modules => 'Mozilla::CA JSON Data::Dumper'
 );
 
 use Irssi;
@@ -23,6 +23,8 @@ my $pkg_name = 'slack';
 our ($is_slack, @conversations, @users);
 our (%chan_name_id, %user_name_id, %user_id_name);
 
+my $reminder_args = "-user +time +text";
+
 sub set ($) {
     $pkg_name.'_'.$_[0];
 }
@@ -33,13 +35,17 @@ Irssi::settings_add_str($pkg_name, set('playback_color'), '%w');
 Irssi::settings_add_str($pkg_name, set('api_token'), '');
 Irssi::settings_add_bool($pkg_name, set('auto_playback'), 0);
 
+
 Irssi::command_bind('help', 'cmd_help');
 Irssi::command_bind("$pkg_name test", \&cmd_test);
 Irssi::command_bind("$pkg_name playback", \&cmd_playback);
+Irssi::command_bind("$pkg_name remind", \&cmd_remind);
 Irssi::command_bind($pkg_name , \&cmd_handler);
 Irssi::signal_add_first("default command $pkg_name", \&cmd_unknown);
 Irssi::signal_add_last("server connected", \&kick_off);
 Irssi::signal_add_last("complete word", \&completion);
+
+Irssi::command_set_options("$pkg_name remind", $reminder_args);
 
 sub show_help {
     my ($help, $text);
@@ -48,8 +54,10 @@ sub show_help {
     $help = "slack $VERSION
 /slack playback
     Retrieves history for all joined channel
-/slack playback #<CHANNEL_NAME>
+/slack playback (#)<channel>
     Retrieves history for given channel
+/slack remind -user <user> -time <time> -text <text>
+    Sets a reminder
 ";
 
     foreach (split(/\n/, $help)) {
@@ -100,6 +108,43 @@ sub cmd_playback {
             @messages = fetch_history($channel_id);
             add_playback($channel, reverse(@messages)) if (scalar @messages);
         }
+    }
+}
+
+sub cmd_remind {
+    return unless $is_slack;
+
+    my ($command_args) = @_;
+    my @args = ();
+    my @options_list = Irssi::command_parse_options("$pkg_name remind", $command_args);
+
+    if (@options_list) {
+        my $options = $options_list[0];
+
+        if (exists $options->{time} && exists $options->{text}) {
+            push(@args, 'time', $options->{time});
+            push(@args, 'text', $options->{text});
+        } else {
+            return;
+        }
+
+        if (exists $options->{user}) {
+            my $user = $options->{user};
+            $user =~ s/@//;
+
+            my $user_id = $user_name_id{$user};
+
+            push(@args, 'user', $user_id);
+        }
+    }
+
+    my $content = make_post('reminders.add', @args);
+    my $json = decode_json($content);
+
+    if ($json->{ok}) {
+        print CLIENTCRAP 'Reminder set!';
+    } else {
+        print CLIENTCRAP 'Something went wrong!';
     }
 }
 
