@@ -76,11 +76,10 @@ sub cmd_playback {
 
     my ($channel, $server, $item) = @_;
 
-    $channel =~ s/\+s$//g; # strip trailing spaces
+    $channel =~ s/^\s+|\s+$//g; #trim whitespaces
     $channel =~ s/#//g; # strip # from channel name
 
     if ($channel) {
-
         my $channel_id = $chan_name_id{$channel};
         my @messages = fetch_history($channel_id);
 
