@@ -31,6 +31,7 @@ Irssi::settings_add_int($pkg_name, set('playback_length'), 50);
 Irssi::settings_add_bool($pkg_name, set('include_private'), 0);
 Irssi::settings_add_str($pkg_name, set('playback_color'), '%w');
 Irssi::settings_add_str($pkg_name, set('api_token'), '');
+Irssi::settings_add_bool($pkg_name, set('auto_playback'), 0);
 
 Irssi::command_bind('help', 'cmd_help');
 Irssi::command_bind("$pkg_name test", \&cmd_test);
@@ -154,10 +155,17 @@ sub make_post {
 sub kick_off {
     my ($server) = @_;
     my $server_addr = $server->{address};
+
     $is_slack = ($server_addr =~ m/slack/);
 
-    fetch_channels() if $is_slack;
-    fetch_users() if $is_slack;
+    return unless $is_slack;
+
+    my $should_auto_playback = Irssi::settings_get_bool(set('auto_playback'));
+
+    fetch_channels();
+    fetch_users();
+
+    #cmd_playback() if $should_auto_playback;
 }
 
 sub fetch_users {
@@ -205,7 +213,6 @@ sub add_playback {
         my $timestamp = DateTime->from_epoch(epoch => $message->{ts});
         my $formatted_timestamp = $timestamp->strftime($timestamp_format);
         my $user = $message->{user};
-        print Dumper($message) unless $user;
         my $username = $user ? $user_id_name{$user} : 'unknown';
         my $text = $message->{text};
         my @mentions = $text =~ /$user_regex/gi;
