@@ -15,3 +15,5 @@ Optional. Set text and or background color to use when adding history. Possible 
 `/set slack_playback_color %R`
 
 # Usage
+### Playback
+To retrive the history of all joined channels just do `/slack playback`. You can add a channel name to get the history just for this channel. `/slack playback #channel`
